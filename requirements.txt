@@ -1,0 +1,21 @@
+# certifi @ file:///private/var/folders/sy/f16zz6x50xz3113nwtb9bvq00000gp/T/abs_477u68wvzm/croot/certifi_1671487773341/work/certifi
+charset-normalizer==3.1.0
+filelock==3.11.0
+huggingface-hub==0.13.4
+idna==3.4
+joblib==1.2.0
+numpy==1.24.2
+packaging==23.1
+pandas==2.0.0
+PyYAML==6.0
+regex==2023.3.23
+requests==2.28.2
+scikit-learn==1.2.2
+scipy==1.10.1
+threadpoolctl==3.1.0
+tokenizers==0.13.3
+torch==1.13.1
+tqdm==4.65.0
+transformers==4.28.0
+typing_extensions==4.5.0
+urllib3==1.26.15
