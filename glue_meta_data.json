@@ -1,47 +1,57 @@
 {
     "mrpc": {
         "labels": ["0", "1"],
-        "col_indices": [null, 3, 4, 0]
+        "col_indices": [null, 3, 4, 0],
+        "has_header": true
     },
     "mnli": {
         "labels": ["contradiction", "entailment", "neutral"],
         "dev_file": "dev_matched.tsv",
         "test_file": "test_matched.tsv",
-        "col_indices": [0, 8, 9, -1]
+        "col_indices": [0, 8, 9, -1],
+        "has_header": true
     },
-    "mnli_mm": {
+    "mnli-mm": {
         "labels": ["contradiction", "entailment", "neutral"],
         "dev_file": "dev_mismatched.tsv",
         "test_file": "test_mismatched.tsv",
-        "col_indices": [0, 8, 9, -1]
+        "col_indices": [0, 8, 9, -1],
+        "has_header": true
     },
     "cola": {
         "labels": ["0", "1"],
-        "col_indices": [null, 3, null, 1]
+        "col_indices": [null, 3, null, 1],
+        "has_header": false
     },
     "sst-2": {
         "labels": ["0", "1"],
-        "col_indices": [null, 0, null, 1]
+        "col_indices": [null, 0, null, 1],
+        "has_header": true
     },
     "sts-b": {
         "labels": [null],
         "col_indices": [0, 7, 8, -1],
-        "output_mode": "regression"
+        "output_mode": "regression",
+        "has_header": true
     },
     "qqp": {
         "labels": ["0", "1"],
-        "col_indices": [0, 3, 4, 5]
+        "col_indices": [0, 3, 4, 5],
+        "has_header": true
     },
     "qnli": {
         "labels": ["entailment", "not_entailment"],
-        "col_indices": [0, 1, 2, -1]
+        "col_indices": [0, 1, 2, -1],
+        "has_header": true
     },
     "rte": {
         "labels": ["entailment", "not_entailment"],
-        "col_indices": [0, 1, 2, -1]
+        "col_indices": [0, 1, 2, -1],
+        "has_header": true
     },
     "wnli": {
         "labels": ["0", "1"],
-        "col_indices": [0, 1, 2, -1]
+        "col_indices": [0, 1, 2, -1],
+        "has_header": true
     }
 }

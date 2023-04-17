@@ -3,19 +3,12 @@ from scipy.stats import pearsonr, spearmanr
 from sklearn.metrics import matthews_corrcoef, f1_score
 
 
-def truncate_seqs(seq_a, max_length, seq_b=None):
-    curr_length = len(seq_a) + (len(seq_b) if seq_b else 0)
-
-    if curr_length > max_length:
-        trunc_length = curr_length - max_length
-
-        if seq_b:
-            trunc_length_a = int(trunc_length / 2.0)
-            trunc_length_b = trunc_length_a + (1 if trunc_length % 2 == 1 else 0)
-
-            seq_a, seq_b = seq_a[:-trunc_length_a], seq_b[:-trunc_length_b]
+def truncate_seqs(seq_a, max_length, seq_b):
+    while len(seq_a) + len(seq_b) > max_length:
+        if len(seq_a) > len(seq_b):
+            seq_a.pop()
         else:
-            seq_a = seq_a[:-trunc_length], seq_b
+            seq_b.pop()
 
     return seq_a, seq_b
 

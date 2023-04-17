@@ -1,6 +1,6 @@
 {
-  "data_path": "../data/cola",
-  "task": "cola",
+  "data_path": "../data",
+  "task": "wnli",
   "teacher_model_type": "bert-base-uncased",
   "student_model_type": "bert-base-uncased",
   "student_num_hidden_layers": 6,
