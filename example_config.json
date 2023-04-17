@@ -1,0 +1,25 @@
+{
+  "data_path": "../data/cola",
+  "task": "cola",
+  "teacher_model_type": "bert-base-uncased",
+  "student_model_type": "bert-base-uncased",
+  "student_num_hidden_layers": 6,
+  "do_lower_case": true,
+  "batch_size": 8,
+  "grad_acc_steps": 1,
+
+  "label_id_params": {
+    "cls_token_at_end": false,
+    "cls_token": "[CLS]",
+    "cls_token_segment_id": 1,
+    "sep_token": "[SEP]",
+    "sep_token_extra": false,
+    "pad_on_left": false,
+    "pad_token": 0,
+    "pad_token_segment_id": 0,
+    "sequence_a_segment_id": 0,
+    "sequence_b_segment_id": 1,
+    "mask_padding_with_zero": true,
+    "max_seq_length": 128
+  }
+}
