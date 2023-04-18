@@ -122,7 +122,7 @@ def train(config: dict,
             best_teacher = teacher
             best_student = student
 
-    return best_teacher, best_student, best_val_loss,loss_S
+    return best_teacher, best_student,loss_S, best_val_loss
 
 
 
