@@ -83,6 +83,18 @@ def train(config: dict,
             logits_S = student(inputs)
             loss_S = loss_fn_S(logits_S, labels)
             loss_S.backward()
+
+            # Calculate s_prime_loss and t_grads
+            with torch.no_grad():
+                student_prime = student.clone()
+                logits_S_prime = student_prime(inputs_q)
+                logits_T = teacher(inputs_q)
+                s_prime_loss = loss_fn_T(F.log_softmax(logits_S_prime / config['temperature'], dim=1),
+                                        F.softmax(logits_T / config['temperature'], dim=1),
+                                        reduction='batchmean')
+                s_prime_loss /= config['held_batch_num'] 
+                t_grads = torch.autograd.grad(s_prime_loss, teacher.parameters())
+
             optimizer_S.step()
 
             # Step 5: Sample a batch of quiz data q ~ Q
@@ -95,8 +107,8 @@ def train(config: dict,
             logits_S_prime = student_prime(inputs_q)
             logits_T = teacher(inputs_q)
             loss_T = loss_fn_T(F.log_softmax(logits_S_prime / config['temperature'], dim=1),
-                               F.softmax(logits_T / config['temperature'], dim=1),
-                               reduction='batchmean')
+                            F.softmax(logits_T / config['temperature'], dim=1),
+                            reduction='batchmean')
             loss_T.backward()
             optimizer_T.step()
 
@@ -104,9 +116,12 @@ def train(config: dict,
             optimizer_S.zero_grad()
             logits_S = student(inputs)
             logits_T = teacher(inputs)
-            loss_S = loss_fn_S(logits_S, labels) + config['lambda'] * loss_fn_T(F.log_softmax(logits_S / config['temperature'], dim=1), F.softmax(logits_T / config['temperature'], dim=1), reduction='batchmean')
+            loss_S = loss_fn_S(logits_S, labels) + config['lambda'] * s_prime_loss
             loss_S.backward()
+            for t_param, s_grad, t_grad in zip(teacher.parameters(), t_grads, torch.autograd.grad(loss_S, student_prime.parameters())):
+                t_param.grad = t_grad - config['lambda'] * s_grad
             optimizer_S.step()
+
 
             # Print loss every n steps
             if step % config['print_every'] == 0:
