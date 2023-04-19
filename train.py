@@ -28,7 +28,8 @@ def run_full_training(config_path):
                                                                teacher,
                                                                student,
                                                                train_dataloader,
-                                                               val_dataloader)
+                                                               val_dataloader,
+                                                               quiz_dataloader)
 
     # Get model metrics
     metrics = task_eval(final_student, val_dataloader, config['task'])
@@ -40,8 +41,10 @@ def train(config: dict,
           teacher: Module,
           student: Module,
           train_dataloader: DataLoader,
-          val_dataloader: DataLoader) -> Tuple[Module, Module, float, float]:
+          val_dataloader: DataLoader,
+          quiz_dataloader: DataLoader) -> Tuple[Module, Module, float, float]:
     device = config['device']
+    lr = config['lr']
     task_loss_fn = config['task_loss_fn']
     alpha = config['alpha']
     beta = config['beta']
@@ -71,7 +74,7 @@ def train(config: dict,
                                              token_type_ids=token_type_ids), labels)
             student_copy.zero_grad()
             loss.backward()
-            student_copy_optim = torch.optim.AdamW(student_copy.parameters(), lr=3e-5)
+            student_copy_optim = torch.optim.AdamW(student_copy.parameters(), lr=lr)
             student_copy_optim.step()
 
             # Update teacher with q and student'
@@ -88,7 +91,7 @@ def train(config: dict,
                 distillation_loss = F.mse_loss(student_outputs, teacher_outputs)
                 teacher.zero_grad()
                 distillation_loss.backward()
-                teacher_optim = torch.optim.AdamW(teacher.parameters(), lr=3e-5)
+                teacher_optim = torch.optim.AdamW(teacher.parameters(), lr=lr)
                 teacher_optim.step()
 
                 break  # Only one batch of quiz data is used in each iteration
@@ -105,7 +108,7 @@ def train(config: dict,
             loss = alpha * distillation_loss + beta * loss
             student.zero_grad()
             loss.backward()
-            student_optim = torch.optim.AdamW(student.parameters(), lr=3e-5)
+            student_optim = torch.optim.AdamW(student.parameters(), lr=lr)
             student_optim.step()
 
         # Evaluate the student model
@@ -113,7 +116,7 @@ def train(config: dict,
             student.eval()
             with torch.no_grad():
                 # Compute validation loss and other metrics
-                val_loss, val_metrics = task_eval(student, val_dataloader, config)
+                val_loss, val_metrics = task_eval(student, val_dataloader, config['task'])
             print('Iteration: {}/{} | Train Loss: {:.6f} | Val Loss: {:.6f}'.format(iteration, num_iterations, loss.item(), val_loss))
             # Check if the current student model is the best so far
             if val_loss < best_loss:

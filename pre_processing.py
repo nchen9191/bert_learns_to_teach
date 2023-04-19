@@ -52,7 +52,7 @@ class LabelIdParams:
         }
 
 
-def get_data_loaders(config: dict, tokenizer) -> Tuple[DataLoader, DataLoader, DataLoader]:
+def get_data_loaders(config: dict, tokenizer, quiz=True) -> Tuple[DataLoader, DataLoader, DataLoader]:
     task = config['task']
     label_id_params = LabelIdParams(**config['label_id_params'])
     folder = config['task'] if task != 'mnli-mm' else 'mnli'
@@ -62,10 +62,15 @@ def get_data_loaders(config: dict, tokenizer) -> Tuple[DataLoader, DataLoader, D
     # Train and Quiz
     train_data_path = Path(data_path, "train.tsv")
     train_dataset = load_features_to_dataset(train_data_path, "train", task, tokenizer, label_id_params, has_header)
-    train_num = int(len(train_dataset) * 0.9)
-    train_dataset, quiz_dataset = random_split(train_dataset, [train_num, len(train_dataset) - train_num])
-    train_dataloader = DataLoader(train_dataset, shuffle=True, batch_size=config['batch_size'])
-    quiz_dataloader = DataLoader(quiz_dataset, shuffle=True, batch_size=config['batch_size'])
+
+    if quiz:
+        train_num = int(len(train_dataset) * 0.9)
+        train_dataset, quiz_dataset = random_split(train_dataset, [train_num, len(train_dataset) - train_num])
+        train_dataloader = DataLoader(train_dataset, shuffle=True, batch_size=config['batch_size'])
+        quiz_dataloader = DataLoader(quiz_dataset, shuffle=True, batch_size=config['batch_size'])
+    else:
+        train_dataloader = DataLoader(train_dataset, shuffle=True, batch_size=config['batch_size'])
+        quiz_dataloader = None
 
     # Dev
     dev_file = "dev.tsv" if "dev_file" not in GLUE_META_DATA[config['task']] else GLUE_META_DATA[task]['dev_file']

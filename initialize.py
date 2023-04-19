@@ -26,7 +26,7 @@ def get_config(config_path: str) -> dict:
 
 
 def load_models(config: dict) -> Tuple[torch.nn.Module, torch.nn.Module]:
-    teacher_config = BertConfig.from_pretrained(config['teacher_model_type'])
+    teacher_config = BertConfig.from_pretrained(config['finetuned_teacher'])
     teacher_config.num_labels = len(GLUE_META_DATA[config['task']])
     teacher_config.finetuning_task = config['task']
     teacher_config.output_hidden_states = True

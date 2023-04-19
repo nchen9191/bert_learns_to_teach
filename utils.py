@@ -1,4 +1,6 @@
 import os
+
+import torch
 from scipy.stats import pearsonr, spearmanr
 from sklearn.metrics import matthews_corrcoef, f1_score
 
@@ -38,13 +40,18 @@ def pearson_and_spearman(preds, labels):
 
 
 def compute_task_metrics(preds, labels, task):
-    if task in ['SST-2', "MNLI", "MNLI-mismatched", "QNLI", "RTE", "WNLI"]:
+    if task in ['sst-2', "mnli", "mnli-mm", "qnli", "rte", "wnli"]:
         return {"acc": simple_accuracy(preds, labels)}
-    elif task in ["MRPC", "QQP"]:
+    elif task in ["mrpc", "qqp"]:
         return acc_and_f1(preds, labels)
-    elif task == "COLA":
+    elif task == "cola":
         return {"mcc": matthews_corrcoef(labels, preds)}
-    elif task == "STS-B":
+    elif task == "sts-b":
         return pearson_and_spearman(preds, labels)
     else:
         return KeyError(task)
+
+
+def load_saved_model(model_path):
+    model, _ = torch.load(model_path)
+    return model
