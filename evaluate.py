@@ -51,7 +51,7 @@ def task_eval(model: Module, dataloader: DataLoader, task: str, device) -> Tuple
     labels = torch.hstack([batch[3].flatten().detach().cpu() for batch in dataloader]).numpy()
 
     result = compute_task_metrics(preds, labels, task)
-    return result, loss
+    return result, loss, preds
 
 
 def test_evaluate(config, model_path_dict, tokenizer, device):
