@@ -68,15 +68,19 @@ def train(config, device):
     logger.info("  Num examples = %d", len(train_dataloader))
     logger.info("  Num Epochs = %d", config['num_train_epochs'])
 
-    global_step = 0
-    tr_loss, logging_loss = 0.0, 0.0
     model.zero_grad()
-    train_iterator = trange(config['num_train_epochs'], desc="Epoch")
 
+    results, dev_loss = task_eval(model, dev_dataloader, task, device)
+    _, tr_loss = task_eval(model, train_dataloader, task, device)
+    print(f"Epoch 0 (before training), Train Loss: {tr_loss}, Dev Loss: {dev_loss}, Task Metrics: {results}")
+
+    global_step = 0
+    train_iterator = trange(config['num_train_epochs'], desc="Epoch")
+    tr_loss, logging_loss = 0.0, 0.0
     for i in train_iterator:
+        model.train()
         epoch_iterator = tqdm(train_dataloader, desc="Iteration", position=0, leave=True)
         for step, batch in enumerate(epoch_iterator):
-            model.train()
             batch = tuple(t.to(device) for t in batch)
             inputs = {'input_ids': batch[0],
                       'attention_mask': batch[1],
