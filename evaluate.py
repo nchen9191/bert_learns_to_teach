@@ -5,6 +5,7 @@ import numpy as np
 import torch
 from torch.nn import Module
 from torch.utils.data import DataLoader
+from tqdm import tqdm
 
 from pre_processing import load_features_to_dataset, LabelIdParams
 from task_specific_utils import GLUE_META_DATA
@@ -19,7 +20,7 @@ def model_inference(model: Module, dataloader: DataLoader, task: str, device) ->
     output_mode = GLUE_META_DATA[task]['output_mode']
 
     with torch.no_grad():
-        for batch in dataloader:
+        for batch in tqdm(dataloader, description="Eval Iteration", position=0, leave=True):
             batch = tuple(t.to(device) for t in batch)
 
             input_ids, attention_mask, token_type_ids, labels = batch[0], batch[1], batch[2], batch[3]

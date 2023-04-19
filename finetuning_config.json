@@ -1,0 +1,31 @@
+{
+  "data_path": "/home/nelson/Downloads/data/",
+  "task": "qnli",
+  "finetuning_model_name": "bert-base-uncased",
+  "do_lower_case": true,
+  "batch_size": 8,
+  "grad_acc_steps": 1,
+  "seed": 715823,
+  "lr": 2e-5,
+  "adam_epsilon": 1e-8,
+  "num_train_epochs": 3,
+  "max_grad_norm": 1.0,
+  "weight_decay": 0.0,
+  "warmup_steps": 0,
+  "output_dir": "/home/nelson/Downloads/models/teachers/qnli/",
+
+  "label_id_params": {
+    "cls_token_at_end": false,
+    "cls_token": "[CLS]",
+    "cls_token_segment_id": 1,
+    "sep_token": "[SEP]",
+    "sep_token_extra": false,
+    "pad_on_left": false,
+    "pad_token": 0,
+    "pad_token_segment_id": 0,
+    "sequence_a_segment_id": 0,
+    "sequence_b_segment_id": 1,
+    "mask_padding_with_zero": true,
+    "max_seq_length": 128
+  }
+}

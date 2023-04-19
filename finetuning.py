@@ -46,7 +46,7 @@ def train(config, device):
     labels = GLUE_META_DATA[task]['labels']
 
     model_config = BertConfig.from_pretrained(config['finetuning_model_name'], num_labels=len(labels), finetuning_task=task)
-    tokenizer = BertTokenizer.from_pretrained(config['finetuning_model_name'], do_lower_case=model_config['do_lower_case'])
+    tokenizer = BertTokenizer.from_pretrained(config['finetuning_model_name'], do_lower_case=config['do_lower_case'])
     model = BertForSequenceClassification.from_pretrained(config['finetuning_model_name'], config=model_config)
 
     train_dataloader, quiz_dataloader, dev_dataloader = get_data_loaders(config, tokenizer, quiz=False)
@@ -61,7 +61,7 @@ def train(config, device):
         {'params': [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
     ]
     optimizer = AdamW(optimizer_grouped_parameters, lr=config['lr'], eps=config['adam_epsilon'])
-    scheduler = WarmupLinearSchedule(optimizer, warmup_steps=config['warmup_steps'], t_total=config['t_total'])
+    scheduler = WarmupLinearSchedule(optimizer, warmup_steps=config['warmup_steps'], t_total=len(train_dataloader))
 
     # Train!
     logger.info("***** Running training *****")
@@ -74,7 +74,7 @@ def train(config, device):
     train_iterator = trange(config['num_train_epochs'], desc="Epoch")
 
     for i in train_iterator:
-        epoch_iterator = tqdm(train_dataloader, desc="Iteration")
+        epoch_iterator = tqdm(train_dataloader, desc="Iteration", position=0, leave=True)
         for step, batch in enumerate(epoch_iterator):
             model.train()
             batch = tuple(t.to(device) for t in batch)
@@ -189,6 +189,7 @@ def main():
         config = json.load(fp)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    a = torch.tensor([1,2,3,4], device='cuda')
 
     # Training
     _, loss, model, tokenizer = train(config, device)
