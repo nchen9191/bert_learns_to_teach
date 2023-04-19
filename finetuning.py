@@ -189,7 +189,6 @@ def main():
         config = json.load(fp)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    a = torch.tensor([1,2,3,4], device='cuda')
 
     # Training
     _, loss, model, tokenizer = train(config, device)

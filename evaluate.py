@@ -16,14 +16,14 @@ def model_inference(model: Module, dataloader: DataLoader, task: str, device) ->
     model.eval()
 
     loss, num_steps = 0.0, 0
-    preds = np.array([])
-    output_mode = GLUE_META_DATA[task]['output_mode']
+    preds = []
+    output_mode = GLUE_META_DATA[task].get("output_mode", "classification")
 
     with torch.no_grad():
-        for batch in tqdm(dataloader, description="Eval Iteration", position=0, leave=True):
+        for batch in tqdm(dataloader, desc="Eval Iteration", position=0, leave=True):
             batch = tuple(t.to(device) for t in batch)
 
-            input_ids, attention_mask, token_type_ids, labels = batch[0], batch[1], batch[2], batch[3]
+            input_ids, attention_mask, token_type_ids = batch[0], batch[1], batch[2]
             labels = batch[3] if len(batch) > 3 else torch.zeros(input_ids.shape)
             outputs = model(input_ids=input_ids,
                             attention_mask=attention_mask,
@@ -33,7 +33,9 @@ def model_inference(model: Module, dataloader: DataLoader, task: str, device) ->
             loss += tmp_eval_loss.mean().item()
 
             num_steps += 1
-            preds = np.append(preds, logits.detach().cpu().numpy(), axis=0)
+            preds.append(logits.detach().cpu().numpy())
+
+        preds = np.vstack(preds)
 
         loss = loss / num_steps
         if output_mode == "classification":
