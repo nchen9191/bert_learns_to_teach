@@ -74,10 +74,9 @@ def train(config, device):
     _, tr_loss = task_eval(model, train_dataloader, task, device)
     print(f"Epoch 0 (before training), Train Loss: {tr_loss}, Dev Loss: {dev_loss}, Task Metrics: {results}")
 
-    global_step = 0
     train_iterator = trange(config['num_train_epochs'], desc="Epoch")
-    tr_loss, logging_loss = 0.0, 0.0
     for i in train_iterator:
+        tr_loss = 0.0
         model.train()
         epoch_iterator = tqdm(train_dataloader, desc="Iteration", position=0, leave=True)
         for step, batch in enumerate(epoch_iterator):
@@ -97,14 +96,13 @@ def train(config, device):
             scheduler.step()  # Update learning rate schedule
             optimizer.step()
             model.zero_grad()
-            global_step += 1
 
         results, dev_loss = task_eval(model, dev_dataloader, task, device)
 
-        tr_loss /= global_step
+        tr_loss /= len(train_dataloader)
         print(f"Epoch {i + 1}, Train Loss: {tr_loss}, Dev Loss: {dev_loss}, Task Metrics: {results}")
 
-    return global_step, tr_loss / global_step, model, tokenizer
+    return model, tokenizer
 
 
 def main():
@@ -195,7 +193,7 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # Training
-    _, loss, model, tokenizer = train(config, device)
+    model, tokenizer = train(config, device)
 
     # Saving best-practices: if you use defaults names for the model, you can reload it using from_pretrained()
     model.save_pretrained(config['output_dir'])
