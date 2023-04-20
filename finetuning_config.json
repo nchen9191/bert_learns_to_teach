@@ -1,5 +1,5 @@
 {
-  "data_path": "/home/nelsonchen/Downloads/data/",
+  "data_path": "../data/",
   "task": "sts-b",
   "finetuning_model_name": "bert-base-uncased",
   "do_lower_case": true,
@@ -8,11 +8,11 @@
   "seed": 715823,
   "lr": 2e-5,
   "adam_epsilon": 1e-8,
-  "num_train_epochs": 3,
+  "num_train_epochs": 1,
   "max_grad_norm": 1.0,
   "weight_decay": 0.0,
   "warmup_steps": 0,
-  "output_dir": "/home/nelson/Downloads/models/teachers/sts-b/",
+  "output_dir": "../models/finetuned_teachers/sts-b/",
 
   "label_id_params": {
     "cls_token_at_end": false,

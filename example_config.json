@@ -1,13 +1,25 @@
 {
   "data_path": "../data",
-  "task": "wnli",
-  "teacher_model_type": "bert-base-uncased",
-  "finetuned_teacher": "",
+  "task": "sts-b",
+  "teacher_model_type": "../models/finetuned_teachers/",
   "student_model_type": "bert-base-uncased",
   "student_num_hidden_layers": 6,
   "do_lower_case": true,
   "batch_size": 8,
   "grad_acc_steps": 1,
+  "seed": 715823,
+  "learning_rate_teacher": 1e-5,
+  "learning_rate_student": 5e-5,
+  "adam_epsilon": 1e-8,
+  "num_epochs": 1,
+  "max_grad_norm": 1.0,
+  "weight_decay": 0.0,
+  "warmup_steps": 0,
+  "logits_mse": true,
+  "alpha": 0.5,
+  "beta": 100,
+
+  "output_dir": "../models/meta_distil_models/",
 
   "label_id_params": {
     "cls_token_at_end": false,

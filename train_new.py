@@ -1,46 +1,73 @@
+import copy
+import gc
+import json
+import os
 from typing import Tuple
+from collections import OrderedDict
 
 import torch
-import torch.nn.functional as F
 from torch.nn import Module
 from torch.utils.data import DataLoader
+from tqdm import tqdm
+from transformers import PretrainedConfig
 
 from evaluate import task_eval
 from initialize import get_config, load_models, load_tokenizer
 from pre_processing import get_data_loaders
+from utils import get_optimizer_and_scheduler, get_order, save_teacher_student_models
+from distillation_meta import MetaPatientDistillation
 
 
 def run_full_training(config_path):
+    # Device
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+
     # Initialize with relevant parameters
     config = get_config(config_path)
 
     # Load initial models
-    teacher, student = load_models(config)
+    teacher, student, teacher_config, student_config = load_models(config)
+    print("Loaded models")
 
     # Get tokenizer
     tokenizer = load_tokenizer(config)
 
     # Get Train and Dev DataLoaders
     train_dataloader, quiz_dataloader, val_dataloader = get_data_loaders(config, tokenizer)
+    print("Loaded data")
 
     # Run training
-    final_teacher, final_student, train_loss, val_loss = train(config,
-                                                               teacher,
-                                                               student,
-                                                               train_dataloader,
-                                                               val_dataloader)
+    print("Beginning meta distil training")
+    final_teacher, final_student = train(config,
+                                         teacher,
+                                         student,
+                                         teacher_config,
+                                         student_config,
+                                         train_dataloader,
+                                         quiz_dataloader,
+                                         val_dataloader,
+                                         device)
+
+    # Save models
+    save_teacher_student_models(config, teacher, student, tokenizer)
+    print("Models saved")
 
     # Get model metrics
-    metrics = task_eval(final_student, val_dataloader, config['task'])
+    metrics = task_eval(final_student, val_dataloader, config['task'], device)
+    print(f"Task ({config['task']})  Metrics: {metrics}")
 
     return final_teacher, final_student, metrics
+
 
 def train(config: dict,
           teacher: Module,
           student: Module,
+          teacher_config: PretrainedConfig,
+          student_config: PretrainedConfig,
           train_dataloader: DataLoader,
           quiz_dataloader: DataLoader,
-          val_dataloader: DataLoader) -> Tuple[Module, Module, float, float]:
+          val_dataloader: DataLoader,
+          device: str) -> Tuple[Module, Module]:
     """
     Train student and teacher models on the training set, evaluate on the validation set, and return the best models.
 
@@ -48,95 +75,173 @@ def train(config: dict,
         config (dict): Configuration dictionary.
         teacher (Module): Teacher model.
         student (Module): Student model.
+        teacher_config (PretrainedConfig): Teacher config from transformers library,
+        student_config (PretrainedConfig: Student config from transformers library,
         train_dataloader (DataLoader): DataLoader for the training set.
         quiz_dataloader (DataLoader): DataLoader for the quiz set.
         val_dataloader (DataLoader): DataLoader for the validation set.
+        device (string): training device e.g cpu, cuda
 
     Returns:
-        Tuple of the final teacher and student models and their corresponding validation loss.
+        Tuple of the final teacher and student models
     """
+
+    # Forward methods
+    meta_distil_forward = MetaPatientDistillation(teacher_config, student_config)
+    order = get_order(teacher_config, student_config)
+
     # Set up optimizer for student and teacher models
-    optimizer_S = torch.optim.Adam(student.parameters(), lr=config['learning_rate_student'])
-    optimizer_T = torch.optim.Adam(teacher.parameters(), lr=config['learning_rate_teacher'])
+    total_steps = config['num_epochs'] * len(train_dataloader)
+    t_optimizer, t_scheduler = get_optimizer_and_scheduler(teacher.named_parameters(), total_steps, config, True)
+    s_optimizer, s_scheduler = get_optimizer_and_scheduler(student.named_parameters(), total_steps, config)
 
-    # Set up loss function for student and teacher models
-    loss_fn_S = F.cross_entropy
-    loss_fn_T = F.kl_div
+    quiz_loss = 0.0
+    s_prime_total_avg_loss, s_prime_train_avg_loss, s_prime_soft_avg_loss, s_prime_distill_avg_loss = 0.0, 0.0, 0.0, 0.0
+    student_total_avg_loss, student_train_avg_loss, student_soft_avg_loss, student_distill_avg_loss = 0.0, 0.0, 0.0, 0.0
 
-    # Initialize best validation loss to infinity
-    best_val_loss = float('inf')
+    teacher.zero_grad()
+    student.zero_grad()
 
     # Training loop
     for epoch in range(config['num_epochs']):
         # Train student and teacher models on the training set
-        for step, batch in enumerate(train_dataloader):
-            # Step 2: Sample batch of training data x ~ D
-            inputs, labels = batch
-            inputs = inputs.to(config['device'])
-            labels = labels.to(config['device'])
 
-            # Step 3: Copy student parameter θ_S to student θ_S'
-            student_prime = student.clone()
+        for step, batch in tqdm(enumerate(train_dataloader), desc='Train'):
+            # Step 2: Sample batch of training data x ~ D
+            student_weights = OrderedDict((name, param) for (name, param) in student.named_parameters())
+            student_backup_state_dict = copy.deepcopy(student.state_dict())
+            s_optimizer_backup_state_dict = copy.deepcopy(s_optimizer.state_dict())
+
+            student.train(), teacher.eval()
+
+            batch = tuple(data.to(device) for data in batch)
+            input_ids, attention_mask, token_type_ids, labels = batch[0], batch[1], batch[2], batch[3]
 
             # Step 4: Update θ_S' with x and θ_T: θ_S' <- θ_S' - λ∇θ_S' LS(x;θ_S;θ_T)
-            optimizer_S.zero_grad()
-            logits_S = student(inputs)
-            loss_S = loss_fn_S(logits_S, labels)
-            loss_S.backward()
+            s_prime_train_loss, s_prime_soft_loss, s_prime_pkd_loss = meta_distil_forward(
+                t_model=teacher,
+                s_model=student if step == 0 else student_weights,
+                order=order,
+                input_ids=input_ids,
+                token_type_ids=token_type_ids,
+                attention_mask=attention_mask,
+                labels=labels,
+                config=config,
+                teacher_grad=True)
+
+            s_prime_loss = config['alpha'] * s_prime_soft_loss \
+                           + (1 - config['alpha']) * s_prime_train_loss \
+                           + config['beta'] * s_prime_pkd_loss
+
+            grads = torch.autograd.grad(s_prime_loss,
+                                        student.parameters() if step == 0 else student_weights.values(),
+                                        create_graph=True,
+                                        retain_graph=True)
+
+            student_weights = OrderedDict(
+                (name, param - config['learning_rate_student'] * grad)
+                for ((name, param), grad) in zip(student_weights.items(), grads)
+            )
+
+            s_prime_total_avg_loss += s_prime_loss.item()
+            s_prime_train_avg_loss += s_prime_train_loss.item()
+            s_prime_soft_avg_loss += s_prime_soft_loss.item()
+            s_prime_distill_avg_loss += s_prime_pkd_loss.item()
 
             # Calculate s_prime_loss and t_grads
-            with torch.no_grad():
-                student_prime = student.clone()
-                logits_S_prime = student_prime(inputs_q)
-                logits_T = teacher(inputs_q)
-                s_prime_loss = loss_fn_T(F.log_softmax(logits_S_prime / config['temperature'], dim=1),
-                                        F.softmax(logits_T / config['temperature'], dim=1),
-                                        reduction='batchmean')
-                s_prime_loss /= config['held_batch_num'] 
-                t_grads = torch.autograd.grad(s_prime_loss, teacher.parameters())
+            s_prime_quiz_loss = torch.tensor(0, dtype=s_prime_loss.dtype)
+            quiz_batch_num = 0
 
-            optimizer_S.step()
+            teacher.train()
+            for step, q_batch in enumerate(quiz_dataloader):
+                if (step + 1) % 10 == 0:
+                    print(f"Processing quiz batch: {step + 1}")
+                q_batch = tuple(t.to(device) for t in q_batch)
+                q_input_ids, q_attention_mask, q_token_type_ids, q_labels = q_batch[:4]
 
-            # Step 5: Sample a batch of quiz data q ~ Q
-            inputs_q, labels_q = next(iter(quiz_dataloader))
-            inputs_q = inputs_q.to(config['device'])
-            labels_q = labels_q.to(config['device'])
+                s_prime_step_loss = meta_distil_forward.s_prime_forward(
+                    s_prime=student_weights,
+                    input_ids=q_input_ids,
+                    token_type_ids=q_token_type_ids,
+                    attention_mask=q_attention_mask,
+                    labels=q_labels
+                )
 
-            # Step 6: Update θ_T with q and θ_S': θ_T <- θ_T - μ∇θ_T LT(q,θ_S'(θ_T))
-            optimizer_T.zero_grad()
-            logits_S_prime = student_prime(inputs_q)
-            logits_T = teacher(inputs_q)
-            loss_T = loss_fn_T(F.log_softmax(logits_S_prime / config['temperature'], dim=1),
-                            F.softmax(logits_T / config['temperature'], dim=1),
-                            reduction='batchmean')
-            loss_T.backward()
-            optimizer_T.step()
+                s_prime_quiz_loss += s_prime_step_loss
+                quiz_batch_num += 1
+
+            s_prime_quiz_loss /= quiz_batch_num
+            t_grads = torch.autograd.grad(s_prime_quiz_loss, teacher.parameters())
+
+            for p, gr in zip(teacher.parameters(), t_grads):
+                p.grad = gr
+
+            torch.nn.utils.clip_grad_norm_(teacher.parameters(), config['max_grad_norm'])
+
+            quiz_loss += s_prime_quiz_loss.item()
+
+            t_optimizer.step()
+            t_scheduler.step()
+
+            # Manual zero_grad
+            for p in teacher.parameters():
+                p.grad = None
+
+            for p in student.parameters():
+                p.grad = None
+
+            del t_grads, grads, student_weights
+            # del grads
+            # del student_weights
 
             # Step 7: Update original θ_S with x and the updated θ_T: θ_S <- θ_S - λ∇θ_S LS(x;θ_S;θ_T)
-            optimizer_S.zero_grad()
-            logits_S = student(inputs)
-            logits_T = teacher(inputs)
-            loss_S = loss_fn_S(logits_S, labels) + config['lambda'] * s_prime_loss
-            loss_S.backward()
-            for t_param, s_grad, t_grad in zip(teacher.parameters(), t_grads, torch.autograd.grad(loss_S, student_prime.parameters())):
-                t_param.grad = t_grad - config['lambda'] * s_grad
-            optimizer_S.step()
+            student.load_state_dict(student_backup_state_dict)
+            s_optimizer.load_state_dict(s_optimizer_backup_state_dict)
+            del student_backup_state_dict, s_optimizer_backup_state_dict
 
+            student.train(), teacher.eval()
 
-            # Print loss every n steps
-            if step % config['print_every'] == 0:
-                print(f"Epoch [{epoch}/{config['num_epochs']}] Step [{step}/{len(train_dataloader)}]:"
-                      f" Loss_S: {loss_S.item():.4f}, Loss_T: {loss_T.item():.4f}")
+            student_train_loss, student_soft_loss, student_pkd_loss = meta_distil_forward(
+                t_model=teacher,
+                s_model=student,
+                order=order,
+                input_ids=input_ids,
+                token_type_ids=token_type_ids,
+                attention_mask=attention_mask,
+                labels=labels,
+                config=config,
+                teacher_grad=False
+            )
+
+            student_loss = config['alpha'] * student_soft_loss \
+                           + (1 - config['alpha']) * student_train_loss \
+                           + config['beta'] * student_pkd_loss
+
+            student_loss.backward()
+            torch.nn.utils.clip_grad_norm_(student.parameters(), config['max_grad_norm'])
+
+            s_optimizer.step()
+            s_scheduler.step()
+            s_optimizer.zero_grad()
+
+            student_total_avg_loss += student_loss.item()
+            student_train_avg_loss += student_train_loss.item()
+            student_soft_avg_loss += student_soft_loss.item()
+            student_distill_avg_loss += student_pkd_loss.item()
+
+            gc.collect()
+            torch.cuda.empty_cache()
 
         # Evaluate student model on the validation set
-        val_loss, _ = task_eval(config, student, val_dataloader)
+        _, val_loss, _ = task_eval(student, val_dataloader, config['task'], device)
 
-        # Save best models based on validation loss
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
-            best_teacher = teacher
-            best_student = student
+        print(f"Epoch: {epoch + 1}, "
+              f"Student Train Loss: {student_total_avg_loss / len(train_dataloader)}, "
+              f"Student Val Loss: {val_loss}")
 
-    return best_teacher, best_student,loss_S, best_val_loss
+    return teacher, student
 
 
+if __name__ == '__main__':
+    config_path = 'example_config.json'
+    run_full_training(config_path)

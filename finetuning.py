@@ -70,11 +70,9 @@ def train(config, device):
 
     model.zero_grad()
 
-    results, dev_loss, _ = task_eval(model, dev_dataloader, task, device)
-    _, tr_loss, _ = task_eval(model, train_dataloader, task, device)
-    print(f"Epoch 0 (before training), Train Loss: {tr_loss}, Dev Loss: {dev_loss}, Task Metrics: {results}")
-
-    prev_preds = None
+    # results, dev_loss, _ = task_eval(model, dev_dataloader, task, device)
+    # _, tr_loss, _ = task_eval(model, train_dataloader, task, device)
+    # print(f"Epoch 0 (before training), Train Loss: {tr_loss}, Dev Loss: {dev_loss}, Task Metrics: {results}")
 
     train_iterator = trange(config['num_train_epochs'], desc="Epoch")
     for i in train_iterator:
@@ -100,9 +98,6 @@ def train(config, device):
             model.zero_grad()
 
         results, dev_loss, preds = task_eval(model, dev_dataloader, task, device)
-        # if i > 0:
-        print(preds.tolist())
-        prev_preds = preds.copy()
         tr_loss /= len(train_dataloader)
         print(f"Epoch {i + 1}, Train Loss: {tr_loss}, Dev Loss: {dev_loss}, Task Metrics: {results}")
 

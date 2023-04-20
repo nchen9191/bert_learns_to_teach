@@ -46,7 +46,7 @@ def model_inference(model: Module, dataloader: DataLoader, task: str, device) ->
     return preds, loss
 
 
-def task_eval(model: Module, dataloader: DataLoader, task: str, device) -> Tuple[Dict[str, float], float]:
+def task_eval(model: Module, dataloader: DataLoader, task: str, device) -> Tuple[Dict[str, float], float, np.array]:
     preds, loss = model_inference(model, dataloader, task, device)
     labels = torch.hstack([batch[3].flatten().detach().cpu() for batch in dataloader]).numpy()
 
