@@ -26,7 +26,7 @@ def get_config(config_path: str) -> dict:
         return json.load(j)
 
 
-def load_models(config: dict) -> Tuple[torch.nn.Module, torch.nn.Module, PretrainedConfig, PretrainedConfig]:
+def load_models(config: dict, device) -> Tuple[torch.nn.Module, torch.nn.Module, PretrainedConfig, PretrainedConfig]:
     teacher_model_path = os.path.join(config['teacher_model_type'], config['task'])
     teacher_config = BertConfig.from_pretrained(teacher_model_path)
     teacher_config.num_labels = len(GLUE_META_DATA[config['task']]['labels'])
@@ -40,6 +40,9 @@ def load_models(config: dict) -> Tuple[torch.nn.Module, torch.nn.Module, Pretrai
     student_config.finetuning_task = config['task']
     student_config.output_hidden_states = True
     student_model = BertForSequenceClassification.from_pretrained(config['student_model_type'], config=student_config)
+
+    teacher_model.to(device)
+    student_model.to(device)
 
     return teacher_model, student_model, teacher_config, student_config
 

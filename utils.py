@@ -103,8 +103,8 @@ def save_teacher_student_models(config, teacher, student, tokenizer):
     tokenizer.save_pretrained(os.path.join(config['output_dir'], config['task'], "teacher"))
     tokenizer.save_pretrained(os.path.join(config['output_dir'], config['task'], "student"))
 
-    with open(os.path.join(config['output_dir'], "teacher", 'config.json'), "w") as fp:
+    with open(os.path.join(config['output_dir'], config['task'], "teacher", 'config.json'), "w") as fp:
         json.dump(config, fp)
 
-    with open(os.path.join(config['output_dir'], "student", 'config.json'), "w") as fp:
+    with open(os.path.join(config['output_dir'], config['task'], "student", 'config.json'), "w") as fp:
         json.dump(config, fp)

@@ -1,7 +1,7 @@
 {
-  "data_path": "../data",
-  "task": "sts-b",
-  "teacher_model_type": "../models/finetuned_teachers/",
+  "data_path": "/home/nelson/Downloads/data",
+  "task": "rte",
+  "teacher_model_type": "/home/nelson/Downloads/models/finetuned_teachers/",
   "student_model_type": "bert-base-uncased",
   "student_num_hidden_layers": 6,
   "do_lower_case": true,
@@ -9,9 +9,9 @@
   "grad_acc_steps": 1,
   "seed": 715823,
   "learning_rate_teacher": 1e-5,
-  "learning_rate_student": 5e-5,
+  "learning_rate_student": 2e-5,
   "adam_epsilon": 1e-8,
-  "num_epochs": 1,
+  "num_epochs": 4,
   "max_grad_norm": 1.0,
   "weight_decay": 0.0,
   "warmup_steps": 0,
@@ -19,7 +19,7 @@
   "alpha": 0.5,
   "beta": 100,
 
-  "output_dir": "../models/meta_distil_models/",
+  "output_dir": "/home/nelson/Downloads/models/meta_distil_models/",
 
   "label_id_params": {
     "cls_token_at_end": false,

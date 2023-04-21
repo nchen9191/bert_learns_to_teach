@@ -64,10 +64,12 @@ def get_data_loaders(config: dict, tokenizer, quiz=True) -> Tuple[DataLoader, Da
     train_dataset = load_features_to_dataset(train_data_path, "train", task, tokenizer, label_id_params, has_header)
 
     if quiz:
-        train_num = int(len(train_dataset) * 0.9)
-        train_dataset, quiz_dataset = random_split(train_dataset, [train_num, len(train_dataset) - train_num])
+        quiz_num = int(len(train_dataset) * 0.1)
+        # quiz_num = 32
+        train_num = len(train_dataset) - quiz_num
+        train_dataset, quiz_dataset = random_split(train_dataset, [train_num, quiz_num])
         train_dataloader = DataLoader(train_dataset, shuffle=True, batch_size=config['batch_size'])
-        quiz_dataloader = DataLoader(quiz_dataset, shuffle=True, batch_size=64)
+        quiz_dataloader = DataLoader(quiz_dataset, shuffle=True, batch_size=config['batch_size'])
     else:
         train_dataloader = DataLoader(train_dataset, shuffle=True, batch_size=config['batch_size'])
         quiz_dataloader = None
