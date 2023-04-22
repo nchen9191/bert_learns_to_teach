@@ -45,7 +45,10 @@ def train(config, device):
     task = config['task']
     labels = GLUE_META_DATA[task]['labels']
 
-    model_config = BertConfig.from_pretrained(config['finetuning_model_name'], num_labels=len(labels), finetuning_task=task)
+    model_config = BertConfig.from_pretrained(config['finetuning_model_name'],
+                                              num_labels=len(labels),
+                                              finetuning_task=task,
+                                              num_hidden_layers=config['num_hidden_layers'])
     tokenizer = BertTokenizer.from_pretrained(config['finetuning_model_name'], do_lower_case=config['do_lower_case'])
     model = BertForSequenceClassification.from_pretrained(config['finetuning_model_name'], config=model_config)
 

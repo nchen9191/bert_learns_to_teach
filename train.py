@@ -1,5 +1,7 @@
 import copy
 import gc
+import json
+import os
 from collections import OrderedDict
 from typing import Tuple
 
@@ -56,6 +58,9 @@ def run_full_training(config_path):
     # Get model metrics
     metrics, _, _ = task_eval(final_student, val_dataloader, config['task'], device)
     print(f"Task ({config['task']})  Metrics: {metrics}")
+
+    with open(os.path.join(config['output_dir'], config['task'], "student/results.json"), 'w') as fp:
+        json.dump(metrics, fp)
 
     return final_teacher, final_student, metrics
 
