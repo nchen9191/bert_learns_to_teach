@@ -11,7 +11,7 @@ from transformers import PretrainedConfig
 
 from distillation_meta import MetaPatientDistillation
 from evaluate import task_eval
-from initialize import get_config, load_models, load_tokenizer
+from initialize import get_config, load_models, load_tokenizer, set_seed
 from pre_processing import get_data_loaders
 from utils import get_optimizer_and_scheduler, get_order, save_teacher_student_models
 
@@ -22,6 +22,9 @@ def run_full_training(config_path):
 
     # Initialize with relevant parameters
     config = get_config(config_path)
+
+    # Set seed
+    set_seed(config['seed'])
 
     # Load initial models
     teacher, student, teacher_config, student_config = load_models(config, device)
