@@ -166,8 +166,8 @@ def train(config: dict,
             quiz_batch_num = 0
 
             teacher.train()
-            for step, q_batch in enumerate(quiz_dataloader):
-                if step == config['num_quiz_batches']:
+            for q_step, q_batch in enumerate(quiz_dataloader):
+                if q_step == config['num_quiz_batches']:
                     break
                 q_batch = tuple(t.to(device) for t in q_batch)
                 q_input_ids, q_attention_mask, q_token_type_ids, q_labels = q_batch[:4]
