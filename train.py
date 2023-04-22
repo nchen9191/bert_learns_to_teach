@@ -83,7 +83,6 @@ def train(config: dict,
     Returns:
         Tuple of the final teacher and student models
     """
-
     # Forward methods
     meta_distil_forward = MetaPatientDistillation(teacher_config, student_config)
     order = get_order(teacher_config, student_config)
@@ -160,8 +159,8 @@ def train(config: dict,
 
             teacher.train()
             for step, q_batch in enumerate(quiz_dataloader):
-                # if (step + 1) % 1 == 0:
-                #     print(f"Processing quiz batch: {step + 1}")
+                if step == config['num_quiz_batches']:
+                    break
                 q_batch = tuple(t.to(device) for t in q_batch)
                 q_input_ids, q_attention_mask, q_token_type_ids, q_labels = q_batch[:4]
 

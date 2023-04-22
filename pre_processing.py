@@ -65,7 +65,7 @@ def get_data_loaders(config: dict, tokenizer, quiz=True) -> Tuple[DataLoader, Da
 
     if quiz:
         quiz_num = int(len(train_dataset) * 0.1)
-        # quiz_num = 32
+        # quiz_num = 128
         train_num = len(train_dataset) - quiz_num
         train_dataset, quiz_dataset = random_split(train_dataset, [train_num, quiz_num])
         train_dataloader = DataLoader(train_dataset, shuffle=True, batch_size=config['batch_size'])

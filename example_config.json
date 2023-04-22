@@ -1,11 +1,12 @@
 {
-  "data_path": "/home/nelson/Downloads/data",
-  "task": "rte",
-  "teacher_model_type": "/home/nelson/Downloads/models/finetuned_teachers/",
+  "data_path": "../data",
+  "task": "cola",
+  "teacher_model_type": "../models/finetuned_teachers/",
   "student_model_type": "bert-base-uncased",
   "student_num_hidden_layers": 6,
   "do_lower_case": true,
   "batch_size": 8,
+  "num_quiz_batches": 20,
   "grad_acc_steps": 1,
   "seed": 715823,
   "learning_rate_teacher": 1e-5,
@@ -19,7 +20,7 @@
   "alpha": 0.5,
   "beta": 100,
 
-  "output_dir": "/home/nelson/Downloads/models/meta_distil_models/",
+  "output_dir": "../models/meta_distil_models/",
 
   "label_id_params": {
     "cls_token_at_end": false,

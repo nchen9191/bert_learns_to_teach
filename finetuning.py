@@ -70,9 +70,9 @@ def train(config, device):
 
     model.zero_grad()
 
-    # results, dev_loss, _ = task_eval(model, dev_dataloader, task, device)
-    # _, tr_loss, _ = task_eval(model, train_dataloader, task, device)
-    # print(f"Epoch 0 (before training), Train Loss: {tr_loss}, Dev Loss: {dev_loss}, Task Metrics: {results}")
+    results, dev_loss, _ = task_eval(model, dev_dataloader, task, device)
+    _, tr_loss, _ = task_eval(model, train_dataloader, task, device)
+    print(f"Epoch 0 (before training), Train Loss: {tr_loss}, Dev Loss: {dev_loss}, Task Metrics: {results}")
 
     train_iterator = trange(config['num_train_epochs'], desc="Epoch")
     for i in train_iterator:
@@ -190,16 +190,17 @@ def main():
         config = json.load(fp)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    print("Device used:", device)
 
     # Training
     model, tokenizer = train(config, device)
 
     # Saving best-practices: if you use defaults names for the model, you can reload it using from_pretrained()
-    model.save_pretrained(config['output_dir'])
-    tokenizer.save_pretrained(config['output_dir'])
+    model.save_pretrained(os.path.join(config['output_dir'], config['task']))
+    tokenizer.save_pretrained(os.path.join(config['output_dir'], config['task']))
 
     # Good practice: save your training arguments together with the trained model
-    with open(os.path.join(config['output_dir'], 'config.json'), "w") as fp:
+    with open(os.path.join(config['output_dir'], config['task'], 'config.json'), "w") as fp:
         json.dump(config, fp)
 
 

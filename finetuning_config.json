@@ -1,6 +1,6 @@
 {
-  "data_path": "../data/",
-  "task": "sts-b",
+  "data_path": "/common/home/nc833/cs533/data/",
+  "task": "cola",
   "finetuning_model_name": "bert-base-uncased",
   "do_lower_case": true,
   "batch_size": 8,
@@ -8,11 +8,11 @@
   "seed": 715823,
   "lr": 2e-5,
   "adam_epsilon": 1e-8,
-  "num_train_epochs": 1,
+  "num_train_epochs": 3,
   "max_grad_norm": 1.0,
   "weight_decay": 0.0,
   "warmup_steps": 0,
-  "output_dir": "../models/finetuned_teachers/sts-b/",
+  "output_dir": "/common/home/nc833/cs533/models/finetuned_teachers/",
 
   "label_id_params": {
     "cls_token_at_end": false,
