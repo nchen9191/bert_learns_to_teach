@@ -84,6 +84,9 @@ def get_data_loaders(config: dict, tokenizer, quiz=True) -> Tuple[DataLoader, Da
 
 
 def load_raw_data(data_path: Path, task: str, uid_prefix: str, is_test: bool = False, has_header: bool = True) -> List:
+    if is_test:
+        return load_raw_data_test(data_path, task)
+
     indices = GLUE_META_DATA[task]['col_indices']
 
     with open(data_path, 'r') as fp:
@@ -94,7 +97,26 @@ def load_raw_data(data_path: Path, task: str, uid_prefix: str, is_test: bool = F
             example = DataExample(uid=f"{uid_prefix}-{line[indices[0]] if indices[0] else i}",
                                   text_a=line[indices[1]],
                                   text_b=line[indices[2]] if indices[2] else None,
-                                  label=line[indices[3]] if not is_test else None)
+                                  label=line[indices[3]])
+            dataset.append(example)
+
+    return dataset
+
+
+def load_raw_data_test(data_path: Path, task: str):
+    indices = GLUE_META_DATA[task]['test_col_indices']
+    dummy_label = GLUE_META_DATA[task]['labels'][0]
+    dummy_label = dummy_label if dummy_label else 0.0
+
+    with open(data_path, 'r') as fp:
+        dataset = []
+        for i, line in enumerate(csv.reader(fp, delimiter="\t", quotechar=None)):
+            if i == 0:
+                continue
+            example = DataExample(uid=f"{line[indices[0]]}",
+                                  text_a=line[indices[1]],
+                                  text_b=line[indices[2]] if indices[2] else None,
+                                  label=dummy_label)
             dataset.append(example)
 
     return dataset
@@ -104,8 +126,7 @@ def transform_data_to_features(dataset: List,
                                label_map: Dict,
                                tokenizer,
                                label_id_params: LabelIdParams,
-                               output_mode: str,
-                               is_test=False) -> List:
+                               output_mode: str) -> List:
     features = []
 
     for i, data_example in enumerate(dataset):
@@ -158,16 +179,13 @@ def transform_data_to_features(dataset: List,
         assert len(input_mask) == label_id_params.max_seq_length
         assert len(segment_ids) == label_id_params.max_seq_length
 
-        if not is_test:
-            # Build label ids
-            if output_mode == "classification":
-                label_id = label_map[data_example.label]
-            elif output_mode == "regression":
-                label_id = float(data_example.label)
-            else:
-                raise KeyError(output_mode)
+        # Build label ids
+        if output_mode == "classification":
+            label_id = label_map[data_example.label]
+        elif output_mode == "regression":
+            label_id = float(data_example.label)
         else:
-            label_id = None
+            raise KeyError(output_mode)
 
         # Add to list
         features.append(Features(input_ids, input_mask, segment_ids, label_id))
@@ -177,7 +195,8 @@ def transform_data_to_features(dataset: List,
 
 def load_features_to_dataset(data_path: Path,
                              data_type: str,
-                             task: str, tokenizer,
+                             task: str,
+                             tokenizer,
                              label_id_params: LabelIdParams,
                              has_header: bool,
                              is_test: bool = False):
@@ -188,12 +207,10 @@ def load_features_to_dataset(data_path: Path,
         all_input_ids = torch.load(Path(cache_path, 'all_input_ids.pt'))
         all_input_mask = torch.load(Path(cache_path, 'all_input_mask.pt'))
         all_segment_ids = torch.load(Path(cache_path, 'all_segment_ids.pt'))
-
-        if not is_test:
-            all_label_ids = torch.load(Path(cache_path, 'all_label_ids.pt'))
+        all_label_ids = torch.load(Path(cache_path, 'all_label_ids.pt'))
     else:
         # Load the raw data
-        data_set = load_raw_data(data_path, task, data_type, task == "test", has_header)
+        data_set = load_raw_data(data_path, task, data_type, is_test, has_header)
 
         # Compute params
         label_map = {label: i for i, label in enumerate(GLUE_META_DATA[task]["labels"])}
@@ -207,21 +224,16 @@ def load_features_to_dataset(data_path: Path,
         all_input_ids = torch.tensor([f.input_ids for f in features], dtype=torch.long)
         all_input_mask = torch.tensor([f.input_mask for f in features], dtype=torch.long)
         all_segment_ids = torch.tensor([f.segment_ids for f in features], dtype=torch.long)
+        all_label_ids = torch.tensor([f.label_id for f in features], dtype=label_type)
 
         cache_path.mkdir(parents=True, exist_ok=True)
         torch.save(all_input_ids, Path(cache_path, 'all_input_ids.pt'))
         torch.save(all_input_mask, Path(cache_path, 'all_input_mask.pt'))
         torch.save(all_segment_ids, Path(cache_path, 'all_segment_ids.pt'))
+        torch.save(all_label_ids, Path(cache_path, 'all_label_ids.pt'))
 
-        if not is_test:
-            all_label_ids = torch.tensor([f.label_id for f in features], dtype=label_type)
-            torch.save(all_label_ids, Path(cache_path, 'all_label_ids.pt'))
-
-    # Build DataSet
-    if not is_test:
-        tensor_data_set = TensorDataset(all_input_ids, all_input_mask, all_segment_ids, all_label_ids)
-    else:
-        tensor_data_set = TensorDataset(all_input_ids, all_input_mask, all_segment_ids)
+        # Build DataSet
+    tensor_data_set = TensorDataset(all_input_ids, all_input_mask, all_segment_ids, all_label_ids)
 
     return tensor_data_set
 

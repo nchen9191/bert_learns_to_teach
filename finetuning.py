@@ -39,6 +39,8 @@ MODEL_CLASSES = {
 
 
 def train(config, device):
+    print(f"Starting finetuning for task: {config['task']}, num_hidden_layers: {config['num_hidden_layers']}")
+
     """ Train the model """
     set_seed(config['seed'])
 

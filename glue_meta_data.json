@@ -21,16 +21,19 @@
     "cola": {
         "labels": ["0", "1"],
         "col_indices": [null, 3, null, 1],
+        "test_col_indices": [0, 1, null],
         "has_header": false
     },
     "sst-2": {
         "labels": ["0", "1"],
         "col_indices": [null, 0, null, 1],
+        "test_col_indices": [0, 1, null],
         "has_header": true
     },
     "sts-b": {
         "labels": [null],
         "col_indices": [0, 7, 8, -1],
+        "test_col_indices": [0, 7, 8],
         "output_mode": "regression",
         "has_header": true
     },
@@ -47,11 +50,13 @@
     "rte": {
         "labels": ["entailment", "not_entailment"],
         "col_indices": [0, 1, 2, -1],
+        "test_col_indices": [0, 1, 2],
         "has_header": true
     },
     "wnli": {
         "labels": ["0", "1"],
         "col_indices": [0, 1, 2, -1],
+        "test_col_indices": [0, 1, 2],
         "has_header": true
     }
 }
